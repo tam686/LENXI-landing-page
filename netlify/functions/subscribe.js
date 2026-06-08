@@ -4,6 +4,8 @@ exports.handler = async function(event) {
   }
   try {
     const { email, name } = JSON.parse(event.body);
+    const firstName = name ? name.split(' ')[0] : '';
+    const lastName = name && name.split(' ').length > 1 ? name.split(' ').slice(1).join(' ') : '';
     const apiKey = process.env.KLAVIYO_PRIVATE_KEY;
     const response = await fetch('https://a.klaviyo.com/api/profile-subscription-bulk-create-jobs/', {
       method: 'POST',
@@ -21,15 +23,19 @@ exports.handler = async function(event) {
                 type: 'profile',
                 attributes: {
                   email: email,
-                  first_name: name,
-                  properties: {
-                    first_name: name
-                  },
                   subscriptions: {
                     email: {
                       marketing: {
                         consent: 'SUBSCRIBED'
                       }
+                    }
+                  }
+                },
+                meta: {
+                  patch_properties: {
+                    append: {
+                      first_name: firstName,
+                      last_name: lastName
                     }
                   }
                 }
@@ -56,8 +62,4 @@ exports.handler = async function(event) {
   } catch (err) {
     console.error('Function error:', err.message);
     return {
-      statusCode: 500,
-      body: JSON.stringify({ error: err.message })
-    };
-  }
-};
+      s
