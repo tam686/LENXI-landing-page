@@ -7,13 +7,45 @@ exports.handler = async function(event) {
     const firstName = name ? name.split(' ')[0] : '';
     const lastName = name && name.split(' ').length > 1 ? name.split(' ').slice(1).join(' ') : '';
     const apiKey = process.env.KLAVIYO_PRIVATE_KEY;
-    const response = await fetch('https://a.klaviyo.com/api/profile-subscription-bulk-create-jobs/', {
+    const headers = {
+      'Content-Type': 'application/json',
+      'revision': '2024-05-15',
+      'Authorization': `Klaviyo-API-Key ${apiKey}`
+    };
+
+    // Step 1: Create or update the profile with name
+    const profileResponse = await fetch('https://a.klaviyo.com/api/profiles/', {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'revision': '2023-12-15',
-        'Authorization': `Klaviyo-API-Key ${apiKey}`
-      },
+      headers,
+      body: JSON.stringify({
+        data: {
+          type: 'profile',
+          attributes: {
+            email,
+            first_name: firstName,
+            last_name: lastName
+          }
+        }
+      })
+    });
+
+    const profileData = await profileResponse.json();
+    console.log('Profile response:', profileResponse.status, JSON.stringify(profileData));
+
+    // Get profile ID — works whether new or already exists
+    let profileId;
+    if (profileResponse.status === 201) {
+      profileId = profileData.data.id;
+    } else if (profileResponse.status === 409) {
+      profileId = profileData.errors[0].meta.duplicate_profile_id;
+    } else {
+      return { statusCode: profileResponse.status, body: JSON.stringify(profileData) };
+    }
+
+    // Step 2: Subscribe the profile to the list
+    const subscribeResponse = await fetch('https://a.klaviyo.com/api/profile-subscription-bulk-create-jobs/', {
+      method: 'POST',
+      headers,
       body: JSON.stringify({
         data: {
           type: 'profile-subscription-bulk-create-job',
@@ -21,21 +53,14 @@ exports.handler = async function(event) {
             profiles: {
               data: [{
                 type: 'profile',
+                id: profileId,
                 attributes: {
-                  email: email,
+                  email,
                   subscriptions: {
                     email: {
                       marketing: {
                         consent: 'SUBSCRIBED'
                       }
-                    }
-                  }
-                },
-                meta: {
-                  patch_properties: {
-                    append: {
-                      first_name: firstName,
-                      last_name: lastName
                     }
                   }
                 }
@@ -53,12 +78,14 @@ exports.handler = async function(event) {
         }
       })
     });
-    const data = await response.text();
-    console.log('Klaviyo response:', response.status, data);
+
+    const subscribeData = await subscribeResponse.text();
+    console.log('Subscribe response:', subscribeResponse.status, subscribeData);
     return {
-      statusCode: response.status,
-      body: data
+      statusCode: subscribeResponse.status,
+      body: subscribeData
     };
+
   } catch (err) {
     console.error('Function error:', err.message);
     return {
