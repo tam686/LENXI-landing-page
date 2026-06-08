@@ -4,12 +4,13 @@ exports.handler = async function(event) {
   }
   try {
     const { email, name } = JSON.parse(event.body);
+    const apiKey = process.env.KLAVIYO_PRIVATE_KEY;
     const response = await fetch('https://a.klaviyo.com/api/profile-subscription-bulk-create-jobs/', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
         'revision': '2023-12-15',
-        'Authorization': 'Klaviyo-API-Key RgLYei'
+        'Authorization': `Klaviyo-API-Key ${apiKey}`
       },
       body: JSON.stringify({
         data: {
