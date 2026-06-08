@@ -22,6 +22,9 @@ exports.handler = async function(event) {
                 attributes: {
                   email: email,
                   first_name: name,
+                  properties: {
+                    first_name: name
+                  },
                   subscriptions: {
                     email: {
                       marketing: {
