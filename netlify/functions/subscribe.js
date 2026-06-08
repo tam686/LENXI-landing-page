@@ -8,7 +8,8 @@ exports.handler = async function(event) {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'revision': '2023-12-15'
+        'revision': '2023-12-15',
+        'Authorization': 'Klaviyo-API-Key RgLYei'
       },
       body: JSON.stringify({
         data: {
